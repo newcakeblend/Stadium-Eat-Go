@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>야구장 먹거리 동선 최적화 및 대기시간 예측 서비스 - KBO Stadium Eat & Go</title>
+  <meta name="description" content="내 좌석 위치를 기반으로 야구장 내 맛집의 최단 동선과 실시간 대기 시간을 확인하고, 경기를 놓치지 않을 최적의 음식 구매 타이밍을 추천받으세요. KBO 9대 구단 지원!">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- 헤더 바 -->
+  <header>
+    <div class="logo-container">
+      <span class="logo-icon">⚾</span>
+      <h1>Stadium Eat & Go</h1>
+      <div class="stadium-badge" id="current-stadium-badge">
+        <span>📍</span> 서울 잠실 야구장
+      </div>
+    </div>
+    
+    <!-- 사용자 정보 영역 -->
+    <div class="user-panel" id="user-panel">
+      <!-- 동적 생성 -->
+    </div>
+  </header>
+
+  <!-- 대시보드 레이아웃 -->
+  <div class="container">
+    <div class="dashboard-grid">
+      
+      <!-- 왼쪽 열: 입력 및 탐색 컨트롤 -->
+      <div class="left-column">
+        
+        <!-- 1단계: 구장 및 좌석 설정 -->
+        <section class="card" id="seat-selection-card">
+          <h2 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            1단계: 내 좌석 설정
+          </h2>
+          <div class="seat-config-row">
+            <div class="select-wrapper">
+              <label for="stadium-select">방문 구장</label>
+              <select id="stadium-select">
+                <option value="jamsil">서울 잠실 야구장 (LG/두산)</option>
+                <option value="munhak">인천 SSG 랜더스필드 (SSG)</option>
+                <option value="sajik">부산 사직 야구장 (롯데)</option>
+                <option value="gocheok">서울 고척 스카이돔 (키움)</option>
+                <option value="daejeon">대전 한화생명이글스파크 (한화)</option>
+                <option value="daegu">대구 삼성 라이온즈 파크 (삼성)</option>
+                <option value="changwon">창원 NC 파크 (NC)</option>
+                <option value="suwon">수원 kt위즈파크 (kt)</option>
+                <option value="gwangju">광주-기아 챔피언스 필드 (KIA)</option>
+              </select>
+            </div>
+            <div class="select-wrapper">
+              <label for="seat-select">내 좌석 블록</label>
+              <select id="seat-select">
+                <!-- 동적 렌더링 -->
+              </select>
+            </div>
+          </div>
+          <div class="seat-summary">
+            <span class="label">선택된 내 위치:</span>
+            <span class="value" id="selected-seat-name">-</span>
+          </div>
+        </section>
+
+        <!-- 2단계: 먹거리 탐색 -->
+        <section class="card" id="food-directory-card">
+          <h2 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            2단계: KBO 구장 맛집 탐색
+          </h2>
+          
+          <!-- 카테고리 필터 탭 -->
+          <div class="category-tabs" id="category-tabs">
+            <button class="category-tab active" data-category="all">전체</button>
+            <button class="category-tab" data-category="chicken">🍗 치킨/맥주</button>
+            <button class="category-tab" data-category="snack">🍜 분식/스낵</button>
+            <button class="category-tab" data-category="fastfood">🍔 패스트푸드</button>
+            <button class="category-tab" data-category="korean">🥩 한식/시그니처</button>
+            <button class="category-tab" data-category="cafe">☕ 디저트/카페</button>
+          </div>
+
+          <!-- 매장 목록 -->
+          <div class="stall-list" id="stall-list">
+            <!-- 동적 렌더링 -->
+          </div>
+
+          <!-- 대표 메뉴판 서랍 -->
+          <div class="menu-drawer" id="menu-drawer" style="display: none;">
+            <div class="menu-drawer-title" id="menu-drawer-title">매장 메뉴판</div>
+            <div class="menu-grid" id="menu-items-container">
+              <!-- 동적 렌더링 -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 신규 추가: 🛒 내 장바구니 -->
+        <section class="card" id="cart-card">
+          <h2 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            장바구니 및 구매 총액
+          </h2>
+          <div class="cart-items-wrapper" id="cart-items-wrapper">
+            <!-- 동적 장바구니 아이템 렌더링 -->
+            <div class="cart-empty-msg" id="cart-empty-msg">
+              장바구니가 비어 있습니다. 위 메뉴판에서 먹을 음식을 골라 추가해 주세요!
+            </div>
+            <div class="cart-items-list" id="cart-items-list" style="display: none;">
+              <!-- 아이템 리스트 행 -->
+            </div>
+          </div>
+          <div class="cart-summary-footer" id="cart-summary-footer" style="display: none;">
+            <div class="cart-total-row">
+              <span class="label">총 결제 예정 금액:</span>
+              <span class="value" id="cart-total-price-val">0원</span>
+            </div>
+            <button class="btn-checkout" id="btn-cart-checkout">주문서 발급 및 대기표 발송</button>
+          </div>
+        </section>
+
+        <!-- 3단계: 경기 상황판 (경기 시뮬레이터) -->
+        <section class="card" id="game-simulator-card">
+          <h2 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            3단계: 실시간 경기 상황판
+          </h2>
+          
+          <div class="game-info-panel">
+            <!-- 스코어보드 -->
+            <div class="scoreboard">
+              <div class="score-team">
+                <span class="score-team-name">원정팀 (AWAY)</span>
+                <span class="score-team-runs" id="away-score">2</span>
+              </div>
+              <div class="score-middle">
+                <span class="inning-text" id="game-inning-text">5회말</span>
+                <span class="auto-badge" id="auto-badge">LIVE 진행중</span>
+              </div>
+              <div class="score-team">
+                <span class="score-team-name">홈팀 (HOME)</span>
+                <span class="score-team-runs" id="home-score">3</span>
+              </div>
+            </div>
+
+            <!-- 하부 레이아웃: 야구 베이스 + SBO 카운트 -->
+            <div style="display: flex; align-items: center; justify-content: space-around;">
+              <!-- 베이스 상황 -->
+              <div class="runners-layout">
+                <div class="base-indicator second-base" id="base-2"></div>
+                <div class="base-indicator third-base" id="base-3"></div>
+                <div class="base-indicator first-base" id="base-1"></div>
+                <div class="base-indicator home-plate"></div>
+              </div>
+
+              <!-- 볼 카운트 -->
+              <div class="count-board">
+                <div class="count-row">
+                  <span class="count-label">B</span>
+                  <div class="count-dots">
+                    <div class="count-dot ball" id="ball-1"></div>
+                    <div class="count-dot ball" id="ball-2"></div>
+                    <div class="count-dot ball" id="ball-3"></div>
+                  </div>
+                </div>
+                <div class="count-row">
+                  <span class="count-label">S</span>
+                  <div class="count-dots">
+                    <div class="count-dot strike" id="strike-1"></div>
+                    <div class="count-dot strike" id="strike-2"></div>
+                  </div>
+                </div>
+                <div class="count-row">
+                  <span class="count-label">O</span>
+                  <div class="count-dots">
+                    <div class="count-dot out" id="out-1"></div>
+                    <div class="count-dot out" id="out-2"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 타순 및 기타 디테일 -->
+            <div class="game-detail-row">
+              <div class="batter-info">
+                <span>현재 타자:</span>
+                <span class="batter-num" id="current-batter-text">4번 타자</span>
+              </div>
+              <div class="status-summary" id="stadium-crowd-level">관중 점유율: 보통 (75%)</div>
+            </div>
+          </div>
+
+          <!-- 시뮬레이터 조작 -->
+          <div class="sim-controls">
+            <button class="btn-sim" id="btn-sim-strike">스트라이크</button>
+            <button class="btn-sim" id="btn-sim-ball">볼</button>
+            <button class="btn-sim" id="btn-sim-hit">안타 ⚾</button>
+            <button class="btn-sim" id="btn-sim-out">아웃 ❌</button>
+            <button class="btn-auto-play" id="btn-toggle-auto">자동 경기 진행 시작</button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- 오른쪽 열: 지도 및 실시간 분석 추천 -->
+      <div class="right-column">
+        
+        <!-- 실시간 경기장 동선 지도 -->
+        <section class="card map-card" id="map-visualization-card">
+          <h2 class="card-title" style="width: 100%;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+            실시간 경기장 동선 지도 (구단 테마 적용)
+          </h2>
+          <div class="map-container">
+            <svg id="stadium-map-svg" viewBox="0 0 800 600" width="100%" height="100%">
+              <!-- JS에서 동적 SVG 렌더링 -->
+            </svg>
+          </div>
+        </section>
+
+        <!-- 동선 및 구매 타이밍 추천 분석 보드 -->
+        <div class="recommend-board">
+          
+          <!-- 경로 디테일 카드 -->
+          <section class="card" id="route-details-card">
+            <h2 class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+              동선 상세 분석
+            </h2>
+            <div class="route-details">
+              <div class="route-meta-grid">
+                <div class="route-meta-item">
+                  <div class="route-meta-label">도보 이동 거리</div>
+                  <div class="route-meta-val" id="route-distance-val">0 m</div>
+                </div>
+                <div class="route-meta-item">
+                  <div class="route-meta-label">매장 예상 대기</div>
+                  <div class="route-meta-val" id="route-wait-val">0 분</div>
+                </div>
+              </div>
+              <div class="route-total-time">
+                <span>총 소요 시간 (왕복포함)</span>
+                <span class="value" id="route-total-time-val">0 분</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- 타이밍 판정 카드 -->
+          <section class="card" id="timing-recommend-card">
+            <h2 class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              구매 최적 타이밍 추천
+            </h2>
+            <div class="recommendation-panel status-go" id="recommend-panel">
+              <span class="rec-badge" id="recommend-badge">GO</span>
+              <div class="rec-title" id="recommend-title">로딩 중...</div>
+              <p class="rec-desc" id="recommend-desc">좌석과 매장을 선택하시면 분석이 시작됩니다.</p>
+              <div class="inning-eta" id="inning-eta-container" style="display:none;">
+                이닝 교대 예상 시간: <span id="inning-eta-val">- 분</span>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- 실시간 대기 현황 제보 (크라우드소싱) -->
+        <section class="card crowdsource-card" id="crowdsourcing-card">
+          <h2 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            관중 제보: 실시간 대기 현황 공유
+          </h2>
+          
+          <div class="report-controls">
+            <div class="report-label">선택한 매장의 대기 상태 제보하기:</div>
+            <div class="report-buttons">
+              <button class="btn-report btn-report-empty" id="btn-report-empty" disabled>🟢 여유</button>
+              <button class="btn-report btn-report-normal" id="btn-report-normal" disabled>🟡 보통</button>
+              <button class="btn-report btn-report-busy" id="btn-report-busy" disabled>🔴 혼잡</button>
+            </div>
+          </div>
+
+          <!-- 실시간 제보 피드 타임라인 -->
+          <div class="reports-feed" id="reports-feed">
+            <!-- 동적 피드 렌더링 -->
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 간편 로그인 모달 -->
+  <div class="modal-overlay" id="login-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>실시간 제보용 간편 로그인</h2>
+        <button class="btn-close-modal" id="btn-close-login">✕</button>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">이메일 주소</label>
+          <input type="email" id="login-email" placeholder="example@domain.com" required>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted);">
+          제보에 참여하시면 기여도 포인트를 적립해 드립니다!
+        </p>
+        <button type="submit" class="btn-submit">로그인 완료</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 주문 내역서 영수증 모달 -->
+  <div class="modal-overlay" id="receipt-modal">
+    <div class="modal-content receipt-ticket">
+      <div class="modal-header">
+        <h2 style="font-family: 'Outfit', sans-serif; letter-spacing: 1px;">🛒 ORDER TICKET</h2>
+        <button class="btn-close-modal" id="btn-close-receipt">✕</button>
+      </div>
+      <div class="receipt-body">
+        <div class="receipt-divider"></div>
+        <div class="receipt-row">
+          <span class="label">방문 구장:</span>
+          <span class="value" id="rec-stadium-name">-</span>
+        </div>
+        <div class="receipt-row">
+          <span class="label">주문 매장:</span>
+          <span class="value" id="rec-stall-name">-</span>
+        </div>
+        <div class="receipt-divider"></div>
+        
+        <div class="receipt-menu-list" id="rec-menu-list">
+          <!-- 메뉴 상세 행 동적 추가 -->
+        </div>
+        
+        <div class="receipt-divider"></div>
+        <div class="receipt-row total">
+          <span class="label">최종 결제 금액:</span>
+          <span class="value" id="rec-total-price">-</span>
+        </div>
+        <div class="receipt-divider"></div>
+        
+        <div class="receipt-ticket-footer">
+          <div class="waiting-number-box">
+            <div class="title">대기 번호</div>
+            <div class="number" id="rec-waiting-num">#104</div>
+          </div>
+          <div class="receipt-timing-box">
+            <div class="title">🚨 추천 이동 타이밍 안내</div>
+            <div class="desc" id="rec-timing-msg">현재 이닝 교대 시간에 다녀오시기 딱 좋은 시점입니다. 서둘러 출발해 주세요!</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-submit" id="btn-confirm-receipt" style="width: 100%; margin-top: 15px;">티켓 저장 및 닫기</button>
+    </div>
+  </div>
+
+  <!-- ES6 엔트리 스크립트 로드 -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
